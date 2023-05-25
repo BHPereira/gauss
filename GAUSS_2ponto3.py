@@ -8,20 +8,20 @@ import sympy
 from sympy import *
 
 ##########################    Biblioteca para interface gráfica    ###############################
-import tkinter
+#import tkinter
 from tkinter import ttk, Label, LabelFrame, Entry, Frame, Tk, Listbox, Button, Menu, messagebox
 from tkinter import *
 from tkinter.ttk import *
 from tkinter.filedialog import askopenfile
 from tkinter.filedialog import asksaveasfilename
-from tkinter.ttk import Combobox
+#from tkinter.ttk import Combobox
 
 ###########################    Biblioteca para criação de DXF    #################################
 import ezdxf
 from ezdxf import bbox
 
 ###########################    Biblioteca para criação de PDF    #################################
-from reportlab.pdfgen import canvas
+#from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
@@ -487,26 +487,27 @@ def ajustarPol():
     if ajustamento_ativado == 1:
         global resultados_ajust_ida, resultados_ajust_volta, resultados_ajust
         
+        resultados_ajust_ida=np.empty((len(coordenadas_estacao),18), dtype=list)
+        resultados_ajust_volta=np.empty((len(coordenadas_estacao),18), dtype=list)
+        resultados_ajust=np.empty((len(coordenadas_estacao),18), dtype=list)
+        
+        ###########################   PROPAGAÇÃO IDA   #############################
+        for o in range(0,len(coordenadas_estacao)):
+            resultados_ajust_ida[o][0]=coordenadas_estacao[o][0]
+            resultados_ajust_ida[o][1]=coordenadas_estacao[o][1]
+            resultados_ajust_ida[o][2]=coordenadas_estacao[o][2]
+            if o == 0:
+                resultados_ajust_ida[o][14]=var_x_0
+                resultados_ajust_ida[o][15]=var_y_0
+                resultados_ajust_ida[o][17]=math.sqrt(var_x_0**2+var_y_0**2)
+            elif coordenadas_estacao[o][0] == lista_sequencia_correta[-1]:
+                resultados_ajust_ida[o][14]=var_x_f
+                resultados_ajust_ida[o][15]=var_y_f
+                
+        
         #####################   MÉTODO PROPOSTO PELA NBR 13.133   ###########################    
         if tipo_ajustamento == "NBR-13.133 (Método Simplificado)":
             
-            resultados_ajust_ida=np.empty((len(coordenadas_estacao),18), dtype=list)
-            resultados_ajust_volta=np.empty((len(coordenadas_estacao),18), dtype=list)
-            resultados_ajust=np.empty((len(coordenadas_estacao),18), dtype=list)
-            
-            ###########################   PROPAGAÇÃO IDA   #############################
-            for o in range(0,len(coordenadas_estacao)):
-                resultados_ajust_ida[o][0]=coordenadas_estacao[o][0]
-                resultados_ajust_ida[o][1]=coordenadas_estacao[o][1]
-                resultados_ajust_ida[o][2]=coordenadas_estacao[o][2]
-                if o == 0:
-                    resultados_ajust_ida[o][14]=var_x_0
-                    resultados_ajust_ida[o][15]=var_y_0
-                    resultados_ajust_ida[o][17]=math.sqrt(var_x_0**2+var_y_0**2)
-                elif coordenadas_estacao[o][0] == lista_sequencia_correta[-1]:
-                    resultados_ajust_ida[o][14]=var_x_f
-                    resultados_ajust_ida[o][15]=var_y_f
-                    
             n=1
             for i in range (0, len(m)):
                 if m[i][3] == "ESTACAO" and m[i][1] != lista_sequencia_correta[-1]:
@@ -712,9 +713,9 @@ def ajustarPol():
                     
                 ##########################   MATRIZ Clb   ###############################
                 variancias=[]
-                for i in range(0, 2*len(lista_sequencia_correta)-1):
-                    variancias.append(1)
-                """for i in dist:
+                #for i in range(0, 2*len(lista_sequencia_correta)-1):
+                #    variancias.append(1)
+                for i in dist:
                     variancias.append(((precisao_linear+ppm*i/1000)/1000)**2)
                 for l in range(0, len(lista_sequencia_correta)):
                     for i in range (0, len(m)):
@@ -729,7 +730,7 @@ def ajustarPol():
                                             DHpv_re = math.sqrt(m[j][7]**2+m[k][7]**2-2*m[j][7]*m[k][7]*math.cos(Graus_Rad(m[k][6]-m[j][6]))) #m
                                             desv_c=math.sqrt(((Er/1000)/(m[j][7]*m[k][7]))**2*(m[j][7]**2+m[k][7]**2)+((Ei/1000)/(m[j][7]*m[k][7]))**2*(DHpv_re/2))*648000/math.pi #"
                                             desv_i=math.sqrt(4*precisao_angular**2+desv_n**2/2+desv_c**2) #"
-                                            variancias.append(math.radians((desv_i/3600)**2))"""
+                                            variancias.append(math.radians((desv_i/3600)**2))
                 Clb=np.diagflat(variancias)
                 
                 ####################################   MATRIZ PESO   ############################
@@ -935,13 +936,11 @@ def ajustarPol():
                 
                     #########################   MCV A POSTERIORI DOS PARAMETROS   #######################
                     Cxy = SIGMA_QUADRADO * np.linalg.inv(np.transpose(A)@P@A)
-                    diagonal_principal = np.empty((len(par),2), dtype=float)
+                    diagonal_principal = []
                     for i in range(0,len(Cxy)):
                         for j in range(0, len(Cxy)):
-                            if i == j and i%2 == 0:
-                                diagonal_principal[i][0] = Cxy[i][j]
-                            elif i == j and i%2 != 0:
-                                diagonal_principal[i][1] = Cxy[i][j]
+                            if i == j:
+                                diagonal_principal.append(Cxy[i][j])
                     
                     ########################   MCV A POSTERIORI DAS OBSERVAÇOES   #######################
                     CLB = SIGMA_QUADRADO * Clb
@@ -981,12 +980,12 @@ def ajustarPol():
                             comprimento_pol_a+=lb[i]
                     
                     matriz_impressao[0][0] = lista_sequencia_correta[0]
-                    matriz_impressao[0][3] = var_x_0/100
-                    matriz_impressao[0][4] = var_y_0/100
+                    matriz_impressao[0][3] = var_x_0/1000
+                    matriz_impressao[0][4] = var_y_0/1000
                     
                     matriz_impressao[-1][0] = lista_sequencia_correta[-1]
-                    matriz_impressao[-1][3] = var_x_f/100
-                    matriz_impressao[-1][4] = var_y_f/100
+                    matriz_impressao[-1][3] = var_x_f/1000
+                    matriz_impressao[-1][4] = var_y_f/1000
                     
                     kn=0
                     for i in range(0, len(coordenadas_ajustadas)):
@@ -994,9 +993,9 @@ def ajustarPol():
                         matriz_impressao[i][1] = coordenadas_ajustadas[i][0]
                         matriz_impressao[i][2] = coordenadas_ajustadas[i][1]
                         if i > 0 and i < len(coordenadas_ajustadas)-1:
-                            matriz_impressao[i][3] = math.sqrt(diagonal_principal[kn][0])
-                            matriz_impressao[i][4] = math.sqrt(diagonal_principal[kn][1])
-                            kn+=1
+                            matriz_impressao[i][3] = math.sqrt(diagonal_principal[kn])
+                            matriz_impressao[i][4] = math.sqrt(diagonal_principal[kn+1])
+                            kn+=2
                     
                     messagebox.showinfo(title="AJUSTAMENTO", message="Concluído!")
   
@@ -1257,8 +1256,13 @@ def propagarVariancias():
                                     n+=1                
         
         elif tipo_propag == "Teoria dos erros (Método Completo)":
-            global desv_medidas
-            desv_medidas=np.empty((irrad, 9), dtype=list)
+            global var_irr
+            var_irr = np.empty((irrad, 3), dtype=list)
+            
+            for i in range (0, len(dados_irr)):
+                var_irr[i][0] = dados_irr[i][0]
+                var_irr[i][1] = math.sqrt(precisao_linear**2+(ppm*dados_irr[i][24]/1000)**2)/1000
+            
             h=0
             for i in range (0, len(m)):
                 if m[i][3] == "ESTACAO":
@@ -1271,26 +1275,18 @@ def propagarVariancias():
                                     PNlin=precisao_linear+ppm*m[k][7]*1000 #mm
                                     var_DI=math.sqrt(Ei**2+Er**2+PNlin**2) #mm
                                     var_z=math.sqrt(2*precisao_angular**2+precisao_compensador**2) #"
-                                    var_DH=math.sqrt((math.sin(math.radians(m[k][5])))**2*var_DI**2+(m[k][4]*math.cos(math.radians(m[k][5])))**2*(var_z*math.pi/648000)**2) #mm
                                     var_n=math.sqrt(precisao_compensador**2*((1/math.tan(math.radians(m[j][5])))**2+(1/math.tan(math.radians(m[k][5])))**2)) #"
                                     DHpv_re = math.sqrt(m[j][7]**2+m[k][7]**2-2*m[j][7]*m[k][7]*math.cos(Graus_Rad(m[k][6]-m[j][6]))) #m
                                     var_c=math.sqrt(((Er/1000)/(m[j][7]*m[k][7]))**2*(m[j][7]**2+m[k][7]**2)+((Ei/1000)/(m[j][7]*m[k][7]))**2*(DHpv_re/2))*648000/math.pi #"
                                     var_i=math.sqrt(4*precisao_angular**2+var_n**2/2+var_c**2) #"
-                                    if m[i][1] == resultados_ajust[0][0]:
-                                        var_az_re=math.sqrt(((y_referencia_i-ypol[0])/m[j][7]**2)**2*((var_x_re/1000)**2+(var_x_0/1000)**2)+((x_referencia_i-xpol[0])/m[j][7]**2)**2*((var_y_re/1000)**2+(var_y_0/1000)**2))*648000/math.pi #"
+                                    if m[i][1] == resultados_ajust_ida[0][0]:
+                                        var_az_re=math.sqrt(((y_referencia_i-y_base_i)/m[j][7]**2)**2*((var_x_re/1000)**2+(var_x_0/1000)**2)+((x_referencia_i-x_base_i)/m[j][7]**2)**2*((var_y_re/1000)**2+(var_y_0/1000)**2))*648000/math.pi #"
                                     else:
-                                        for p in range(0,len(resultados_ajust)):
-                                            if m[i][1]==resultados_ajust[p][0]:
-                                                var_az_re=math.sqrt(((resultados_ajust[p-1][2]-resultados_ajust[p][2])/m[j][7]**2)**2*((resultados_ajust[p-1][14]/1000)**2+(resultados_ajust[p][14]/1000)**2)+((resultados_ajust[p-1][1]-resultados_ajust[p][1])/m[j][7]**2)**2*((resultados_ajust[p-1][15]/1000)**2+(resultados_ajust[p][15]/1000)**2))*648000/math.pi
-                                    
-                                    desv_medidas[h][0]=m[k][0]
-                                    desv_medidas[h][1]=m[k][1]
-                                    desv_medidas[h][2]=math.sqrt(precisao_linear**2+(ppm*m[k][7]*1000)**2)
-                                    desv_medidas[h][3]=math.sqrt(var_az_re**2+var_i**2)
-                                    desv_medidas[h][4]=m[k][7]
-                                    for ii in range(0, len(lista_sequencia_correta)):
-                                        if lista_sequencia_correta[ii]==m[k][1]:
-                                            desv_medidas[h][5]=Graus_Rad(math.degrees(azmt_est[ii])+(m[k][6]-m[j][6]))
+                                        for p in range(0,len(resultados_ajust_ida)):
+                                            if m[i][1]==resultados_ajust_ida[p][0]:
+                                                var_az_re=math.sqrt(((resultados_ajust_ida[p-1][2]-resultados_ajust_ida[p][2])/m[j][7]**2)**2*((resultados_ajust_ida[p-1][14]/1000)**2+(resultados_ajust_ida[p][14]/1000)**2)+((resultados_ajust_ida[p-1][1]-resultados_ajust_ida[p][1])/m[j][7]**2)**2*((resultados_ajust_ida[p-1][15]/1000)**2+(resultados_ajust_ida[p][15]/1000)**2))*648000/math.pi
+
+                                    var_irr[h][2]=math.sqrt(var_az_re**2+var_i**2)
                                     h+=1
             
             ##############################    Matriz dos resultados    #########################################
@@ -1303,7 +1299,6 @@ def propagarVariancias():
             y = ya+d*sympy.cos(az)
             parametros_deriv = [xa, ya, d, az]
             
-            k1=0
             for i in range (0, irrad):
                 ################################    Matriz Jacobiana    ############################################
                 jacobiana = np.empty((2,4), dtype=float)
@@ -1318,15 +1313,19 @@ def propagarVariancias():
                 lista_cl = []
                 
                 if ajustamento_ativado == 1 and tipo_ajustamento == "Método Paramétrico":
-                    lista_cl[0] = Cxy[k1][k1]
-                    lista_cl[1] = Cxy[k1+1][k1+1]
-                    k1+=2
+                    for k in range(0, len(matriz_impressao)):
+                        if dados_irr[i][1] == matriz_impressao[k][0]:
+                            lista_cl.append(matriz_impressao[k][3])
+                            lista_cl.append(matriz_impressao[k][4])
+                   
                 elif ajustamento_ativado == 1 and tipo_ajustamento == "NBR-13.133 (Método Simplificado)":
-                    lista_cl[0] = resultados_ajust[j][14]**2
-                    lista_cl[1] = resultados_ajust[j][15]**2
-                    k1+=2
-                lista_cl[2] = desv_medidas[i][2]**2
-                lista_cl[3] = math.radians(desv_medidas[i][3]/3600)**2            
+                    for k in range(0, len(matriz_impressao)):
+                        if dados_irr[i][1] == matriz_impressao[k][0]:
+                            lista_cl.append(matriz_impressao[k][3])
+                            lista_cl.append(matriz_impressao[k][4])
+                    
+                lista_cl.append(var_irr[i][1]**2)
+                lista_cl.append(math.radians(var_irr[i][2]/3600)**2)           
 
                 cl = np.diagflat(lista_cl)
 
@@ -2164,7 +2163,8 @@ def gerarRelatorio():
         if imprimir_v_ca == 1 and imprimir_v_cp == 0 and imprimir_v_cr == 0:
             texto_9 = "Número de estações: {} estações".format(len(lista_sequencia_correta))
             texto_10 = "Comprimento da poligonal: {} m".format(np.round(comprimento_pol_a))
-            linhas_de_texto=[texto_9, texto_10]
+            texto_11 = "Número de iterações: {}".format(iteracoes)
+            linhas_de_texto=[texto_9, texto_10, texto_11]
             
             # Criar uma lista de objetos Paragraph para cada linha de texto
             styles = getSampleStyleSheet()
@@ -2248,8 +2248,8 @@ def gerarRelatorio():
                     lista_aux.append(matriz_impressao[i][0])
                     lista_aux.append(str(round(matriz_impressao[i][1],3)))
                     lista_aux.append(str(round(matriz_impressao[i][2],3)))
-                    lista_aux.append(str(round(math.sqrt(matriz_impressao[i][3],3))))
-                    lista_aux.append(str(round(math.sqrt(matriz_impressao[i][4],3))))
+                    lista_aux.append(str(round(matriz_impressao[i][3],3)))
+                    lista_aux.append(str(round(matriz_impressao[i][4],3)))
                     planilha1.append(lista_aux)
                 tabela = Table(planilha1)
                 tabela.setStyle(TableStyle([
@@ -2279,12 +2279,12 @@ def gerarRelatorio():
                     for i in range(0, len(dados_irr)):
                         lista_aux2=[]
                         lista_aux2.append(dados_irr[i][0])
-                        lista_aux2.append(str(round(dados_irr[i][5],1)))
-                        lista_aux2.append(str(round(dados_irr[i][6],1)))
+                        lista_aux2.append(str(round(dados_irr[i][5],3)))
+                        lista_aux2.append(str(round(dados_irr[i][6],3)))
                         lista_aux2.append(dados_irr[i][2])
                         if imprimir_v_pre == 1:
                             lista_aux2.append(str(round(math.sqrt(var_irradiacoes[i][1]),3)))
-                            lista_aux2.append(str(round(math.sqrt(var_irradiacoes[i][1]),3)))
+                            lista_aux2.append(str(round(math.sqrt(var_irradiacoes[i][2]),3)))
                         planilha2.append(lista_aux2)
                     tabela2 = Table(planilha2)
                     tabela2.setStyle(TableStyle([
@@ -2298,6 +2298,95 @@ def gerarRelatorio():
                                                 ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
                     conteudo.append(tabela2)
                 doc.build(conteudo, onFirstPage=criar_cabecalho3)
+        
+        #########################    Imprime os dados do ajustamento    ################################
+        if imprimir_v_aju == 1:
+            ############################    Imprime a matriz das covariancias    #######################
+            planilha1=[["Matriz das covariâncias"]]
+            
+            for i in range(0, len(Cxy)):
+                lista_aux=[]
+                for j in range(0, len(Cxy)):
+                    lista_aux.append(Cxy[i][j])
+                planilha1.append(lista_aux)
+            
+            tabela=Table(planilha1)
+            tabela.setStyle(TableStyle([
+                                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                                        ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
+            conteudo.append(tabela)
+            
+            ############################    Residuo das observações    ##########################
+            planilha2=[["Resíduo das observações"]]
+            
+            for i in range(0, len(V)):
+                lista_aux=[]
+                lista_aux.append(V[i])
+                planilha2.append(lista_aux)
+            
+            tabela2=Table(planilha2)
+            tabela2.setStyle(TableStyle([
+                                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                                        ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
+            conteudo.append(tabela2)
+            
+            ############################    MVC  a posteriori das observações    ########################
+            planilha3=[["MCV a posteriori das observações"]]
+            
+            for i in range(0, len(CLB)):
+                lista_aux=[]
+                for j in range(0, len(CLB)):
+                    lista_aux.append(round(CLB[i][j],10))
+                planilha3.append(lista_aux)
+            
+            tabela3=Table(planilha3)
+            tabela3.setStyle(TableStyle([
+                                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                                        ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
+            conteudo.append(tabela3)
+            
+            ###########################    MVC a posteriori dos residuos    ########################
+            planilha4=[["MCV a posteriori dos resíduos"]]
+            
+            for i in range(0, len(Cv)):
+                lista_aux=[]
+                for j in range(0, len(Cv)):
+                    lista_aux.append(round(Cv[i][j],10))
+                planilha4.append(lista_aux)
+            
+            tabela4=Table(planilha3)
+            tabela4.setStyle(TableStyle([
+                                        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                                        ('GRID', (0, 0), (-1, -1), 1, colors.black)]))
+            conteudo.append(tabela4)
+            
+            doc.build(conteudo, onFirstPage=criar_cabecalho3)
+            
+            
         messagebox.showinfo(title="RELATÓRIO", message="GERADO!")
     
     ###################    Cria a janela de configuraçao do relatorio    ########################
